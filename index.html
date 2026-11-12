@@ -338,7 +338,8 @@ a{color:var(--accent)}
     <div class="card">
       <div class="card-h"><h3>Microsoft 365</h3></div>
       <p class="status" id="msStatus"></p>
-      <button class="secondary" id="msButton" type="button"></button>
+      <p class="status" id="syncStatus" hidden></p>
+      <div class="actions two" id="msActions"><button class="secondary" id="syncBtn" type="button">Sync now</button><button class="secondary" id="msButton" type="button"></button></div>
     </div>
     <div class="card">
       <div class="card-h"><h3>Customers</h3></div>
@@ -549,7 +550,7 @@ function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; cle
 let pushTimer;
 function settingsChanged(){
   settings.updated = Date.now(); store.set("bb_settings", settings);
-  clearTimeout(pushTimer); pushTimer = setTimeout(()=>{ if(account) pushSettings().catch(()=>{}); }, 800);
+  clearTimeout(pushTimer); pushTimer = setTimeout(()=>{ if(account) syncSettings(); }, 800);
 }
 function addCustomers(list){
   list.forEach(c=>{
@@ -572,20 +573,31 @@ function importFromHash(){
   }catch(e){ toast("That setup link didn't work. Ask Claude for a new one."); }
   history.replaceState(null, "", location.pathname);
 }
+// One settings file in OneDrive keeps the phone and the computer in step: OneDrive › Apps › Bridge Bid › settings.json
+const SETTINGS_PATH = () => drivePath(["Apps","Bridge Bid","settings.json"]) + "/content";
+let sync = store.get("bb_sync", {state:"never"});
+function setSync(state, msg){ sync = {state, msg:msg||"", at:new Date().toISOString()}; store.set("bb_sync", sync); if(screen==="settings") renderSettings(); }
 async function pullSettings(){
-  const r = await graph("GET", "/me/drive/special/approot:/settings.json:/content", null, {allow404:true});
-  if(!r){ await pushSettings(); return; }
+  const r = await graph("GET", SETTINGS_PATH(), null, {allow404:true});
+  if(!r){
+    if((settings.updated||0) > 0 || settings.customers.length) await pushSettings();
+    return;
+  }
   const remote = await r.json();
   if((remote.updated||0) > (settings.updated||0)){
     settings = Object.assign({customers:[], bcc:"", root:"Bids", updated:0}, remote);
     store.set("bb_settings", settings);
-    if(screen==="settings") renderSettings();
     if(screen==="project") fillCustomers();
   } else if((remote.updated||0) < (settings.updated||0)) await pushSettings();
 }
 async function pushSettings(){
-  await graph("PUT", "/me/drive/special/approot:/settings.json:/content",
-    new Blob([JSON.stringify(settings, null, 2)], {type:"application/json"}));
+  await graph("PUT", SETTINGS_PATH(), new Blob([JSON.stringify(settings, null, 2)], {type:"application/json"}));
+}
+async function syncSettings(){
+  if(!account) return;
+  setSync("busy");
+  try{ await pullSettings(); setSync("ok"); }
+  catch(e){ setSync("bad", e.message); }
 }
 
 /* ---------- Microsoft sign-in and Graph ---------- */
@@ -601,7 +613,7 @@ async function initMsal(){
     const res = await msalApp.handleRedirectPromise();
     if(res && res.account) msalApp.setActiveAccount(res.account);
     account = msalApp.getActiveAccount() || msalApp.getAllAccounts()[0] || null;
-    if(account){ msalApp.setActiveAccount(account); pullSettings().catch(e=>console.warn(e)); }
+    if(account){ msalApp.setActiveAccount(account); syncSettings(); }
   }catch(e){ toast("Microsoft sign-in didn't finish. Try again from Settings."); console.warn(e); }
 }
 function signIn(){ if(msalApp) msalApp.loginRedirect({scopes:SCOPES, prompt:"select_account"}); }
@@ -637,7 +649,7 @@ function suggestQuoteNo(){
 
 function fillCustomers(){
   const sel = $("#customer"), names = customerNames();
-  sel.innerHTML = `<option value="">${names.length ? "Choose a customer…" : "No customers yet. Add one below."}</option>` +
+  sel.innerHTML = `<option value="">${names.length ? "Choose a customer…" : account ? "No customers yet. Add one below." : "Sign in (Settings) to load your customers"}</option>` +
     names.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("") +
     `<option value="${NEWC}">＋ Add a new customer…</option>`;
   sel.value = names.includes(bid.customer) ? bid.customer : "";
@@ -962,7 +974,14 @@ function renderSettings(){
   const st = $("#msStatus"), b = $("#msButton");
   if(!MS_READY){ st.className="status"; st.textContent="Not connected yet. This is turned on once the app is registered in Microsoft 365."; b.hidden=true; }
   else if(account){ st.className="status ok"; st.textContent=`Signed in as ${account.username}`; b.hidden=false; b.textContent="Sign out"; }
-  else { st.className="status"; st.textContent="Not signed in."; b.hidden=false; b.textContent="Sign in to Microsoft"; }
+  else { st.className="status bad"; st.textContent="Not signed in on this device. Sign in to load your customers and to save and email quotations."; b.hidden=false; b.textContent="Sign in to Microsoft"; }
+  $("#syncBtn").hidden = !account; $("#msActions").className = account ? "actions two" : "actions";
+  const ss = $("#syncStatus"); ss.hidden = !account;
+  const when = sync.at ? new Date(sync.at).toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}) : "";
+  if(sync.state==="busy"){ ss.className="status busy"; ss.textContent="Syncing with OneDrive…"; }
+  else if(sync.state==="ok"){ ss.className="status ok"; ss.textContent=`Customer list synced with OneDrive, ${when}`; }
+  else if(sync.state==="bad"){ ss.className="status bad"; ss.textContent=`OneDrive sync failed (${when}): ${sync.msg}`; }
+  else { ss.className="status"; ss.textContent="Not synced yet."; }
   $("#custList").innerHTML = settings.customers.length ? settings.customers.map((c,i)=>`
     <div class="cust-row"><div class="nm">${esc(c.name)}</div><button type="button" data-rmc="${i}">Remove</button>
       <input type="email" inputmode="email" data-em="${i}" value="${esc(c.email)}" placeholder="Estimating email" autocomplete="off"></div>`).join("")
@@ -972,6 +991,7 @@ function renderSettings(){
   $("#rootHint").textContent = `Quotations save to ${rootSegs().join(" › ")} › Customer › Project folder.`;
 }
 $("#msButton").addEventListener("click", ()=> account ? signOut() : signIn());
+$("#syncBtn").addEventListener("click", syncSettings);
 $("#custList").addEventListener("input", e=>{ const i = e.target.dataset.em; if(i!==undefined){ settings.customers[+i].email = e.target.value.trim(); settingsChanged(); } });
 $("#custList").addEventListener("click", e=>{
   const i = e.target.dataset.rmc; if(i===undefined) return;
@@ -985,7 +1005,7 @@ $("#addCustBtn").addEventListener("click", ()=>{
 });
 $("#bcc").addEventListener("input", e=>{ settings.bcc = e.target.value.trim(); settingsChanged(); });
 $("#root").addEventListener("input", e=>{ settings.root = e.target.value.trim() || "Bids"; settingsChanged(); $("#rootHint").textContent = `Quotations save to ${rootSegs().join(" › ")} › Customer › Project folder.`; });
-$("#openSettings").addEventListener("click", ()=>go("settings"));
+$("#openSettings").addEventListener("click", ()=>{ go("settings"); syncSettings(); });
 $("#closeSettings").addEventListener("click", ()=>go(returnTo || "project"));
 
 /* ---------- Start ---------- */
