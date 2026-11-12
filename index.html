@@ -1,0 +1,1004 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bridge Bid</title>
+<meta name="theme-color" content="#1F2A37">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bridge Bid">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+html{-webkit-text-size-adjust:100%}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+[hidden]{display:none!important}
+
+/* Layout: one phone-width column; a wizard of four stages with a sticky running tally while hours are entered */
+:root{
+  --bg:#EEF0EE; --surface:#FFFFFF; --ink:#18212B; --muted:#5B6570; --line:#D5DAD6;
+  --accent:#1E5788; --accent-soft:#E1EAF3; --on-accent:#FFFFFF; --danger:#B13E2C; --ok:#2E6B45;
+  --alt:#8A1C2B; --alt-soft:#F6E6E8;
+  /* the quotation preview is always printed paper, so it keeps its own colors in both themes */
+  --paper:#FFFFFF; --paper-ink:#1F2A37; --paper-slate:#334155; --paper-maroon:#8A1C2B; --paper-band:#EEF1F5;
+  --sans:"IBM Plex Sans",-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --letter:Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10151B; --surface:#19212A; --ink:#E6EAEE; --muted:#9AA5B0; --line:#2B3642;
+  --accent:#73A9DB; --accent-soft:#1C3145; --on-accent:#0C1620; --danger:#E5826F; --ok:#7CC496;
+  --alt:#E7909C; --alt-soft:#3A2228; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10151B; --surface:#19212A; --ink:#E6EAEE; --muted:#9AA5B0; --line:#2B3642;
+  --accent:#73A9DB; --accent-soft:#1C3145; --on-accent:#0C1620; --danger:#E5826F; --ok:#7CC496;
+  --alt:#E7909C; --alt-soft:#3A2228; color-scheme:dark}
+html,body{background:var(--bg);color:var(--ink)}
+body{font-family:var(--sans);font-size:16px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:560px;margin:0 auto;padding-block:16px 32px;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-direction:column;gap:12px}
+.brand{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.brand h1{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em}
+.brand small{color:var(--muted);font-size:13px}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;list-style:none;margin:0;padding:0}
+.steps li{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);
+  border-top:3px solid var(--line);padding-top:6px;font-weight:600}
+.steps li.on{color:var(--accent);border-color:var(--accent)}
+.steps li.done{color:var(--ink);border-color:var(--ink)}
+section.screen{display:flex;flex-direction:column;gap:16px}
+h2{margin:0;font-size:22px;font-weight:600;text-wrap:balance}
+.lede{margin:-8px 0 0;color:var(--muted);font-size:15px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:13px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--muted)}
+.field label .opt{text-transform:none;letter-spacing:0;font-weight:400}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:380px){.row{grid-template-columns:1fr}}
+input,select,textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--surface);
+  border:1px solid var(--line);border-radius:8px;padding:12px;width:100%;box-sizing:border-box;min-width:0}
+textarea{min-height:76px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+.big{font-family:var(--mono);font-size:28px;font-weight:600;padding:14px 12px}
+.money{position:relative}
+.money span{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-family:var(--mono);font-size:28px;color:var(--muted)}
+.money input{padding-left:38px}
+.inline-add{display:flex;gap:8px}
+.inline-add input{flex:1}
+.toggle{display:flex;gap:12px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer}
+.toggle input{width:22px;height:22px;flex:none;margin:1px 0 0;accent-color:var(--alt)}
+.toggle b{display:block;font-weight:600}
+.toggle span{font-size:14px;color:var(--muted)}
+button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid transparent;padding:14px 16px;font-weight:600;font-size:16px}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button:disabled{opacity:.45;cursor:default}
+.primary{background:var(--accent);color:var(--on-accent)}
+.secondary{background:var(--surface);color:var(--ink);border-color:var(--line)}
+.ghost{background:none;color:var(--accent);padding:8px 4px;font-weight:600}
+.danger{color:var(--danger)}
+.actions{display:flex;flex-direction:column;gap:10px}
+.actions.two{display:grid;grid-template-columns:1fr 1fr}
+.err{color:var(--danger);font-size:14px;margin:0}
+.tally{position:sticky;bottom:0;background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  padding:12px 14px calc(12px + env(safe-area-inset-bottom,0px));display:flex;justify-content:space-between;align-items:center;gap:12px}
+.tally .lbl{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
+.tally .val{font-family:var(--mono);font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+.tally .val.price{color:var(--accent)}
+.tally .sub{font-size:12px;color:var(--alt);font-family:var(--mono)}
+.lines{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
+.line{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:12px 14px;border-top:1px solid var(--line)}
+.line:first-child{border-top:none}
+.line .name{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.line .hrs{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;font-weight:600}
+.line .notes{grid-column:1/-1;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.line .tools{grid-column:1/-1;display:flex;gap:16px}
+.line .tools button{padding:4px 0;background:none;color:var(--accent);font-size:14px}
+.line .tools button.danger{color:var(--danger)}
+.alt-tag{display:inline-block;font-size:11px;letter-spacing:.05em;text-transform:uppercase;background:var(--alt-soft);color:var(--alt);padding:2px 7px;border-radius:999px;font-weight:700;vertical-align:2px;margin-left:6px}
+.empty{padding:16px 14px;color:var(--muted);font-size:15px}
+.added{background:var(--accent-soft);border-radius:10px;padding:12px 14px;font-size:15px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.card-h{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.card-h h3{margin:0;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px}
+dt{color:var(--muted);font-size:14px}
+dd{margin:0;font-size:15px;min-width:0;overflow-wrap:anywhere}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;padding:0 0 6px;border-bottom:1px solid var(--line)}
+td{padding:8px 0;border-bottom:1px solid var(--line);vertical-align:top}
+td.n,th.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;padding-left:10px}
+td .note{display:block;color:var(--muted);font-size:13px}
+tfoot td{border-bottom:none;font-weight:700;padding-top:10px}
+tr.sect td{color:var(--alt);font-size:12px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;padding-top:14px}
+.grand{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grand > div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.grand .lbl{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
+.grand .val{font-family:var(--mono);font-size:24px;font-weight:600;font-variant-numeric:tabular-nums}
+.grand .price .val{color:var(--accent)}
+.alt-note{grid-column:1/-1;background:var(--alt-soft)!important;border-color:transparent!important;color:var(--alt);font-size:15px}
+.alt-note b{font-family:var(--mono)}
+.chooser{display:flex;flex-direction:column;gap:8px}
+.check{width:52px;height:52px;border-radius:50%;background:var(--ok);color:var(--surface);display:grid;place-items:center;font-size:28px;font-weight:700}
+.path{font-family:var(--mono);font-size:13px;overflow-wrap:anywhere}
+.next-list{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px;font-size:15px}
+.confirm{display:flex;flex-direction:column;gap:10px;background:var(--surface);border:1px solid var(--danger);border-radius:12px;padding:14px}
+.qno{font-family:var(--mono);font-size:18px;font-weight:600}
+
+/* Quotation preview: a scaled replica of the letter-size page */
+.paper{background:var(--paper);color:var(--paper-ink);font-family:var(--letter);border-radius:4px;
+  box-shadow:0 1px 2px rgba(0,0,0,.12),0 6px 24px rgba(0,0,0,.10);padding:28px 24px 18px;font-size:11px;line-height:1.4;display:flex;flex-direction:column;gap:10px;overflow-wrap:anywhere}
+.paper .lh h4{margin:0;font-size:17px;font-weight:700;letter-spacing:.01em;color:var(--paper-ink)}
+.paper .lh .sub{color:var(--paper-maroon);font-size:12px}
+.paper .lh .addr{color:var(--paper-slate);font-size:9.5px}
+.paper .rule{border-top:1.5px solid var(--paper-maroon);margin:2px 0 2px}
+.paper .kv{display:grid;grid-template-columns:42px 1fr auto;gap:2px 10px}
+.paper .k{font-weight:700;color:var(--paper-slate);font-size:10px}
+.paper .date{font-size:11px;white-space:nowrap}
+.paper .date b{color:var(--paper-slate);font-size:10px;margin-right:8px}
+.paper p{margin:0}
+.paper .h{font-weight:700;color:var(--paper-slate);font-size:10.5px}
+.paper ul{margin:0;padding-left:14px;font-size:10.5px}
+.paper .band{background:var(--paper-band);border-top:1.3px solid var(--paper-maroon);border-bottom:1.3px solid var(--paper-maroon);
+  margin:4px -24px 4px 0;padding:7px 24px 7px 8px;display:flex;justify-content:space-between;font-weight:700;font-size:14px}
+.paper .alts{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:10.5px;padding-left:4px}
+.paper .alts b{color:var(--paper-slate)}
+.paper .note{font-style:italic;color:var(--paper-slate);font-size:9.5px}
+.paper .foot{color:var(--paper-slate);font-size:8px;margin-top:10px}
+
+.brand .gear{background:none;border:1px solid var(--line);color:var(--ink);padding:7px 12px;font-size:14px;border-radius:999px}
+.status{font-size:14px;margin:0}
+.status.ok{color:var(--ok)} .status.bad{color:var(--danger)} .status.busy{color:var(--muted)}
+.cust-row{display:grid;grid-template-columns:1fr auto;gap:6px 8px;padding:12px 0;border-top:1px solid var(--line)}
+.cust-row:first-child{border-top:none;padding-top:0}
+.cust-row .nm{font-weight:600;align-self:center;min-width:0;overflow-wrap:anywhere}
+.cust-row input{grid-column:1/-1}
+.cust-row button{padding:4px 0;background:none;color:var(--danger);font-size:14px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);
+  padding:12px 16px;border-radius:10px;font-size:15px;max-width:calc(100% - 48px);z-index:20;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.step-n{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-size:12px;font-weight:700;margin-right:8px;vertical-align:1px}
+.done-mark{color:var(--ok);font-weight:700}
+a{color:var(--accent)}
+.ver{color:var(--muted);font-size:13px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><h1>Bridge Bid</h1><button class="gear" id="openSettings" type="button">Settings</button></div>
+    <ol class="steps" id="steps"><li>Project</li><li>Rate</li><li>Hours</li><li>Summary</li></ol>
+  </header>
+
+  <!-- 1. Project info -->
+  <section class="screen" id="s-project">
+    <h2>Project information</h2>
+    <div class="field">
+      <label for="customer">Bidding to</label>
+      <select id="customer"></select>
+      <div class="inline-add" id="newCustWrap" hidden>
+        <input id="newCust" placeholder="New customer name" autocomplete="off">
+        <button class="secondary" id="saveCust" type="button">Add</button>
+      </div>
+    </div>
+    <div class="field"><label for="owner">Owner</label><input id="owner" placeholder="e.g. IL Department of Transportation" autocomplete="off"></div>
+    <div class="row">
+      <div class="field"><label for="state">State</label><input id="state" placeholder="e.g. IL" autocomplete="off"></div>
+      <div class="field"><label for="due">Bid due</label><input id="due" type="date"></div>
+    </div>
+    <div class="field">
+      <label for="location">Location</label>
+      <input id="location" placeholder="e.g. I-80 over Oak Park Avenue, Cook County, IL" autocomplete="off">
+    </div>
+    <div class="field"><label for="desc">Project description</label><textarea id="desc" placeholder="e.g. Structural steel superstructure detailing, 7 girder lines; 223 ft c/c bearing"></textarea></div>
+    <div class="row">
+      <div class="field"><label for="ref1">Structure no. <span class="opt">(optional)</span></label><input id="ref1" placeholder="e.g. 016-0927" autocomplete="off"></div>
+      <div class="field"><label for="ref2">Other ref. no. <span class="opt">(optional)</span></label><input id="ref2" placeholder="e.g. 62W20" autocomplete="off"></div>
+    </div>
+    <p class="err" id="err-project" hidden></p>
+    <div class="actions">
+      <button class="primary" id="projNext" type="button">Next: hourly rate</button>
+    </div>
+  </section>
+
+  <!-- 2. Rate -->
+  <section class="screen" id="s-rate" hidden>
+    <h2>Hourly rate for this project</h2>
+    <p class="lede">Applied to every discipline on this bid. Revisions are quoted at this rate plus $10.</p>
+    <div class="field">
+      <label for="rate">Rate per hour</label>
+      <div class="money"><span>$</span><input id="rate" class="big" inputmode="decimal" placeholder="0.00" autocomplete="off"></div>
+    </div>
+    <p class="err" id="err-rate" hidden></p>
+    <div class="actions two">
+      <button class="secondary" id="rateBack" type="button">Back</button>
+      <button class="primary" id="rateNext" type="button">Next: hours</button>
+    </div>
+  </section>
+
+  <!-- 3. Discipline entry -->
+  <section class="screen" id="s-disc" hidden>
+    <h2 id="discTitle">Add a discipline</h2>
+    <div class="field">
+      <label for="disc">Discipline</label>
+      <select id="disc"></select>
+      <input id="discOther" placeholder="Type the discipline as it should read on the quotation" autocomplete="off" hidden>
+    </div>
+    <div class="field">
+      <label for="notes">Notes <span class="opt">(optional, for you only)</span></label>
+      <textarea id="notes" placeholder="Anything you want to remember about this item"></textarea>
+    </div>
+    <div class="field">
+      <label for="hours">Hours</label>
+      <input id="hours" class="big" inputmode="decimal" placeholder="0" autocomplete="off">
+    </div>
+    <label class="toggle" for="isAlt">
+      <input type="checkbox" id="isAlt">
+      <div><b>Price as an add alternate</b><span>Listed separately on the quotation, not included in the lump sum.</span></div>
+    </label>
+    <p class="err" id="err-disc" hidden></p>
+    <div class="actions">
+      <button class="primary" id="addLine" type="button">Add to bid</button>
+      <button class="secondary" id="cancelEdit" type="button" hidden>Cancel</button>
+      <button class="ghost" id="discToMore" type="button" hidden>See hours entered so far</button>
+    </div>
+  </section>
+
+  <!-- 3b. More? -->
+  <section class="screen" id="s-more" hidden>
+    <div class="added" id="addedMsg" hidden></div>
+    <h2>Add another discipline?</h2>
+    <div class="actions">
+      <button class="primary" id="moreYes" type="button">Yes, add another</button>
+      <button class="secondary" id="moreNo" type="button">No, review the bid</button>
+    </div>
+    <div class="lines" id="moreLines"></div>
+  </section>
+
+  <!-- 4. Summary -->
+  <section class="screen" id="s-summary" hidden>
+    <h2>Bid summary</h2>
+    <div class="card">
+      <div class="card-h"><h3>Bidding to</h3></div>
+      <div><div id="sumCustomer" style="font-weight:600;font-size:18px"></div><div style="color:var(--muted);font-size:15px">Attn: Estimating</div></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h3>Project</h3></div>
+      <dl id="sumProject"></dl>
+    </div>
+    <div class="card">
+      <div class="card-h"><h3>Hours by discipline</h3><span id="sumRate" class="path"></span></div>
+      <div style="overflow-x:auto"><table id="sumTable"></table></div>
+    </div>
+    <div class="grand" id="grand"></div>
+    <div class="card">
+      <div class="card-h"><h3>Quotation number</h3></div>
+      <input id="quoteNo" class="qno" autocomplete="off" spellcheck="false">
+      <p class="hint">WB, then year and month, then this month's bid count (restarts at 001 each month). Change it if needed.</p>
+    </div>
+    <p class="err" id="err-summary" hidden></p>
+    <div class="actions two" id="sumActions">
+      <button class="secondary" id="editBtn" type="button">Edit</button>
+      <button class="primary" id="acceptBtn" type="button">Accept</button>
+    </div>
+    <div class="card chooser" id="editChooser" hidden>
+      <div class="card-h"><h3>What do you want to change?</h3></div>
+      <button class="secondary" data-edit="project" type="button">Project information</button>
+      <button class="secondary" data-edit="rate" type="button">Hourly rate</button>
+      <button class="secondary" data-edit="lines" type="button">Disciplines and hours</button>
+      <button class="ghost" id="editClose" type="button">Never mind</button>
+    </div>
+  </section>
+
+  <!-- 5. Accepted -->
+  <section class="screen" id="s-done" hidden>
+    <div class="check" aria-hidden="true">✓</div>
+    <h2>Quotation ready</h2>
+    <p class="lede" id="doneLede"></p>
+    <div class="paper" id="paper"></div>
+
+    <div class="card" id="saveCard">
+      <div class="card-h"><h3><span class="step-n">1</span>Save to OneDrive</h3></div>
+      <div id="saveBody"></div>
+    </div>
+
+    <div class="card" id="mailCard">
+      <div class="card-h"><h3><span class="step-n">2</span>Email to customer</h3></div>
+      <div id="mailBody" style="display:flex;flex-direction:column;gap:12px"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h3>Other ways to send it</h3></div>
+      <p class="hint">Opens your iPhone's share menu: Mail, Messages, Save to Files and more.</p>
+      <button class="secondary" id="sharePdf" type="button">Share the PDF…</button>
+    </div>
+
+    <div class="actions">
+      <button class="secondary" id="backToSummary" type="button">Back to summary</button>
+      <button class="ghost danger" id="newBid" type="button">Start a new bid</button>
+    </div>
+    <div class="confirm" id="newConfirm" hidden>
+      <div>Clear this bid and start over? This can't be undone.</div>
+      <div class="actions two">
+        <button class="secondary" id="newNo" type="button">Keep it</button>
+        <button class="primary" id="newYes" type="button">Start new bid</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Settings -->
+  <section class="screen" id="s-settings" hidden>
+    <h2>Settings</h2>
+    <div class="card">
+      <div class="card-h"><h3>Microsoft 365</h3></div>
+      <p class="status" id="msStatus"></p>
+      <button class="secondary" id="msButton" type="button"></button>
+    </div>
+    <div class="card">
+      <div class="card-h"><h3>Customers</h3></div>
+      <p class="hint">The Estimating email is where quotations are sent.</p>
+      <div id="custList"></div>
+      <div class="field"><label for="addCustName">Add a customer</label>
+        <input id="addCustName" placeholder="Company name" autocomplete="off">
+        <input id="addCustEmail" type="email" inputmode="email" placeholder="Estimating email (optional)" autocomplete="off">
+        <button class="secondary" id="addCustBtn" type="button">Add customer</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h3>Email copies</h3></div>
+      <div class="field"><label for="bcc">Send a blind copy of each quotation to</label>
+        <input id="bcc" type="email" inputmode="email" placeholder="your@email.com" autocomplete="off"></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h3>OneDrive folder</h3></div>
+      <div class="field"><label for="root">Bids folder</label>
+        <input id="root" autocomplete="off" placeholder="Bids">
+        <p class="hint" id="rootHint"></p></div>
+    </div>
+    <div class="actions"><button class="primary" id="closeSettings" type="button">Done</button></div>
+    <p class="ver">Bridge Bid 1.0</p>
+  </section>
+
+  <div class="tally" id="tally" hidden>
+    <div><div class="lbl">Lump sum hours</div><div class="val" id="tHours">0</div></div>
+    <div style="text-align:right"><div class="lbl">Lump sum price</div><div class="val price" id="tPrice">$0.00</div><div class="sub" id="tAlt" hidden></div></div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="config.js"></script>
+<script src="vendor/jspdf.umd.min.js"></script>
+<script src="vendor/msal-browser.min.js"></script>
+
+<!-- Quotation content rules, shared by the on-screen preview and the PDF -->
+<script>
+
+const COMPANY = {
+  name:"WEAVER BRIDGE CORPORATION", short:"Weaver Bridge Corporation",
+  subtitle:"Structural Detailing Quotation",
+  address:"974 James Road · Granville, OH 43023 · 740.258.7356",
+  signer:"Douglas J. Weaver", attn:"Estimating",
+  delivery:"As required - call WBC to discuss.",
+  intro:"We are pleased to offer the following quotation for detailed and checked shop drawings for the above-mentioned project.",
+  closing:"If you have any questions regarding this quotation, please do not hesitate to contact us at your earliest convenience."
+};
+const DISCIPLINES = [
+  "ABM","Model","Layouts","General Notes","Paint Notes",
+  "E Sheets - Plans","E Sheets - Sections","E Sheets - Details","Field Bolts","BD Sheets",
+  "Assembly Sheets","Camber (C) Sheets","Horiz Curve (HC) Sheets","X Sheets","M Sheets",
+  "Girders (assembly)","Stringers (assembly)","Cross Frames - Intermediate","Cross Frames - End / Pier",
+  "Diaphragms - Intermediate","Diaphragms - End / Pier","Lateral Bracing","Knee Braces","Bearings",
+  "Floor Plates","Abutment Plates","Walkway Plates","Walkway framing steel","Curb Plates","Misc.","NC/DXF Files"
+];
+// How each discipline reads on the quotation the customer sees
+const QUOTE_NAMES = {
+  "ABM":"Advance Bill of Material", "Model":"Detailing Model", "Layouts":"Layout Drawings",
+  "General Notes":"General Notes & Bridge Standards", "Paint Notes":"Paint & Coating Notes",
+  "E Sheets - Plans":"Erection Plans", "E Sheets - Sections":"Erection Sections", "E Sheets - Details":"Erection Details",
+  "Field Bolts":"Field Bolt Summary",
+  "BD Sheets":"Vertical & Horizontal Alignment Drawings (Blocking Diagrams)",
+  "Assembly Sheets":"Assembly Drawings", "Camber (C) Sheets":"Camber Diagrams", "Horiz Curve (HC) Sheets":"Horizontal Curve Drawings",
+  "X Sheets":"Girder & Stringer Part Details", "M Sheets":"Diaphragm & Cross-Bracing Part Details",
+  "Girders (assembly)":"Girder Details", "Stringers (assembly)":"Stringer Details",
+  "Cross Frames - Intermediate":"Intermediate Cross-Frames", "Cross Frames - End / Pier":"End & Pier Cross-Frames",
+  "Diaphragms - Intermediate":"Intermediate Diaphragms", "Diaphragms - End / Pier":"End & Pier Diaphragms",
+  "Lateral Bracing":"Lateral Bracing", "Knee Braces":"Knee Braces", "Bearings":"Bearing Details",
+  "Floor Plates":"Floor Plates", "Abutment Plates":"Abutment Plates", "Walkway Plates":"Walkway Plates",
+  "Walkway framing steel":"Walkway Framing Steel", "Curb Plates":"Curb Plates", "Misc.":"Miscellaneous Details", "NC/DXF Files":"NC / DXF Machine Files"
+};
+const GN_PAINT = "General Notes, Bridge Standards & Paint/Coating Notes";
+// Order on the quotation: discipline list order, typed-in items before Misc., then NC/DXF, field bolts last
+const TAIL = ["Misc.","NC/DXF Files","Field Bolts"];
+const QUOTE_ORDER = DISCIPLINES.filter(d => !TAIL.includes(d)).concat(["__custom", ...TAIL]);
+
+function quoteItems(lines, rate){
+  const has = new Set(lines.map(l=>l.disc));
+  const out = []; const add = (name, hrs) => { const f = out.find(o=>o.name===name); f ? f.hours += hrs : out.push({name, hours:hrs}); };
+  const hrsOf = d => lines.filter(l=>l.disc===d).reduce((a,l)=>a+l.hours,0);
+  QUOTE_ORDER.forEach(d=>{
+    if(d==="__custom"){ lines.filter(l=>!DISCIPLINES.includes(l.disc)).forEach(l=>add(l.disc,l.hours)); return; }
+    if(!has.has(d)) return;
+    if(d==="General Notes" && has.has("Paint Notes")) return add(GN_PAINT, hrsOf("General Notes")+hrsOf("Paint Notes"));
+    if(d==="Paint Notes" && has.has("General Notes")) return;
+    add(QUOTE_NAMES[d]||d, hrsOf(d));
+  });
+  out.forEach(o=>o.price = o.hours*rate);
+  return out;
+}
+
+/* Builds the quotation PDF */
+function buildQuotePdf(JsPDF, q){
+  const doc = new JsPDF({unit:"pt", format:"letter"});
+  const NAVY=[31,42,55], MAROON=[138,28,43], SLATE=[51,65,85], BAND=[238,241,245];
+  const L=72, R=540, W=R-L, PRICE_X=437, BOTTOM=730;
+  const money = n => new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(n);
+  const T = (s,x,y,o={}) => { doc.setFont("helvetica", o.font||"normal"); doc.setFontSize(o.size||9.5); doc.setTextColor(...(o.color||NAVY)); doc.text(s,x,y,o.align?{align:o.align}:undefined); };
+  let y;
+  const room = h => { if(y+h > BOTTOM){ doc.addPage(); y = 72; } };
+
+  // Letterhead
+  T(COMPANY.name, L, 72, {font:"bold", size:17});
+  T(COMPANY.subtitle, L, 86, {size:10.5, color:MAROON});
+  T(COMPANY.address, L, 97, {size:8.2, color:SLATE});
+  doc.setDrawColor(...MAROON); doc.setLineWidth(1.4); doc.line(L, 106, R, 106);
+
+  // To / date
+  T("TO:", L, 124, {font:"bold", size:9, color:SLATE}); T(q.customer, L+52, 124);
+  T("DATE:", 382, 124, {font:"bold", size:9, color:SLATE}); T(q.date, 420, 124);
+  T("Attn:", L, 139, {font:"bold", size:9, color:SLATE}); T(COMPANY.attn, L+52, 139);
+
+  // Ref block
+  y = 161;
+  T("REF:", L, y, {font:"bold", size:9, color:SLATE});
+  q.refLines.forEach(line => { doc.setFont("helvetica","normal"); doc.setFontSize(9.5);
+    doc.splitTextToSize(line, W-52).forEach(s => { T(s, L+52, y); y += 13.5; }); });
+
+  // Intro
+  y += 10; doc.setFont("helvetica","normal"); doc.setFontSize(9.5);
+  doc.splitTextToSize(COMPANY.intro, W).forEach(s => { T(s, L, y); y += 13; });
+
+  // Includes
+  y += 12; T("This quotation includes the following, as priced:", L, y, {font:"bold", size:9, color:SLATE}); y += 15;
+  q.items.forEach(it => { doc.setFont("helvetica","normal"); doc.setFontSize(9);
+    const parts = doc.splitTextToSize(it.name, W-12);
+    room(13*parts.length);
+    T("•", L, y, {size:9}); parts.forEach(s => { T(s, L+10, y, {size:9}); y += 13; }); });
+
+  // Lump sum band
+  y += 10; room(60);
+  doc.setFillColor(...BAND); doc.rect(L-8, y, 612-(L-8), 29, "F");
+  doc.setDrawColor(...MAROON); doc.setLineWidth(1.2); doc.line(L-8, y, 612, y); doc.line(L-8, y+29, 612, y+29);
+  T("LUMP SUM", L+8, y+19, {font:"bold", size:13}); T(money(q.lumpSum), PRICE_X, y+19, {font:"bold", size:13});
+  y += 29 + 18;
+
+  // Add alternates
+  if(q.alternates.length){
+    room(30);
+    T("Add Alternates (priced separately, not included in the base bid above):", L, y, {font:"bold", size:9, color:SLATE}); y += 16;
+    q.alternates.forEach(a => { room(14);
+      T("•", L+10, y, {size:9}); T(a.name, L+20, y, {size:9});
+      T(money(a.price), PRICE_X, y, {font:"bold", size:9, color:SLATE}); y += 14; });
+    y += 10;
+  }
+
+  // Delivery, revisions, closing, signature
+  room(130);
+  T("Delivery:", L, y, {font:"bold"}); doc.setFont("helvetica","bold"); doc.setFontSize(9.5);
+  T(" " + COMPANY.delivery, L + doc.getTextWidth("Delivery:"), y); y += 17;
+  T(`Note: Revisions to shop drawings due to design, approval, or fabricator changes will be billed at ${money(q.revRate)} per hour.`, L, y, {font:"italic", size:8.5, color:SLATE}); y += 22;
+  doc.setFont("helvetica","normal"); doc.setFontSize(9.5);
+  doc.splitTextToSize(COMPANY.closing, W).forEach(s => { T(s, L, y); y += 13; });
+  y += 22;
+  T("By:", L, y, {font:"bold", size:9, color:SLATE}); y += 15;
+  T(COMPANY.signer, L, y); y += 12;
+  T(COMPANY.short, L, y, {size:8.2, color:SLATE});
+
+  // Footer on every page
+  const n = doc.getNumberOfPages();
+  for(let p=1; p<=n; p++){ doc.setPage(p);
+    T(`${COMPANY.short}  |  Quotation  |  ${q.quoteNo}` + (n>1 ? `  |  Page ${p} of ${n}` : ""), 64.8, 756, {size:7, color:SLATE}); }
+  return doc;
+}
+
+</script>
+
+<script>
+const $ = s => document.querySelector(s);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+const OTHER = "__other", NEWC = "__new";
+const BASE_URL = location.origin + location.pathname.replace(/index\.html$/, "");
+const CONFIG = window.BRIDGE_BID_CONFIG || {};
+const MS_READY = !!(CONFIG.clientId && CONFIG.tenantId && window.msal);
+const SCOPES = ["User.Read", "Files.ReadWrite", "Mail.Send"];
+const blank = () => ({customer:"",owner:"",state:"",desc:"",ref1:"",ref2:"",location:"",due:"",rate:"",lines:[],quoteNo:""});
+
+let settings = Object.assign({customers:[], bcc:"", root:"Bids", updated:0}, store.get("bb_settings", {}));
+let bid = Object.assign(blank(), store.get("bb_draft", {}));
+let screen = store.get("bb_screen", "project");
+let returnTo = store.get("bb_return", "project");
+let fromSummary = false, editingId = null, lastAdded = null;
+
+const money = n => new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(n||0);
+const hrs = n => (Math.round((n||0)*100)/100).toLocaleString("en-US",{maximumFractionDigits:2});
+const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num = v => { const n = parseFloat(String(v).replace(/[$,\s]/g,"")); return isFinite(n) ? n : NaN; };
+const rate = () => num(bid.rate) || 0;
+const baseLines = () => bid.lines.filter(l=>!l.alt);
+const altLines = () => bid.lines.filter(l=>l.alt);
+const sumH = ls => ls.reduce((a,l)=>a+l.hours,0);
+const fmtDate = d => { if(!d) return ""; const [y,m,day]=d.split("-").map(Number); return new Date(y,m-1,day).toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric",year:"numeric"}); };
+const longDate = d => d.toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
+const save = () => { store.set("bb_draft", bid); store.set("bb_screen", screen); store.set("bb_return", returnTo); };
+const fields = ["owner","state","desc","ref1","ref2","location","due"];
+const customerNames = () => settings.customers.map(c=>c.name);
+const customerEmail = name => (settings.customers.find(c=>c.name===name)||{}).email || "";
+
+let toastTimer;
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.hidden=true, 3500); }
+
+/* ---------- Settings: kept on the phone and in OneDrive (Apps › Bridge Bid › settings.json) ---------- */
+let pushTimer;
+function settingsChanged(){
+  settings.updated = Date.now(); store.set("bb_settings", settings);
+  clearTimeout(pushTimer); pushTimer = setTimeout(()=>{ if(account) pushSettings().catch(()=>{}); }, 800);
+}
+function addCustomers(list){
+  list.forEach(c=>{
+    if(typeof c === "string") c = {name:c, email:""};
+    const name = String(c.name||"").trim(); if(!name) return;
+    const ex = settings.customers.find(x=>x.name.toLowerCase()===name.toLowerCase());
+    if(ex){ if(c.email) ex.email = String(c.email).trim(); } else settings.customers.push({name, email:String(c.email||"").trim()});
+  });
+  settings.customers.sort((a,b)=>a.name.localeCompare(b.name));
+}
+function importFromHash(){
+  const m = location.hash.match(/^#import=(.+)$/); if(!m) return;
+  try{
+    const b64 = m[1].replace(/-/g,"+").replace(/_/g,"/");
+    const data = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(b64), ch=>ch.charCodeAt(0))));
+    addCustomers(data.customers||[]);
+    if(data.bcc) settings.bcc = data.bcc;
+    if(data.root) settings.root = data.root;
+    settingsChanged(); toast(`Loaded ${(data.customers||[]).length} customers`);
+  }catch(e){ toast("That setup link didn't work. Ask Claude for a new one."); }
+  history.replaceState(null, "", location.pathname);
+}
+async function pullSettings(){
+  const r = await graph("GET", "/me/drive/special/approot:/settings.json:/content", null, {allow404:true});
+  if(!r){ await pushSettings(); return; }
+  const remote = await r.json();
+  if((remote.updated||0) > (settings.updated||0)){
+    settings = Object.assign({customers:[], bcc:"", root:"Bids", updated:0}, remote);
+    store.set("bb_settings", settings);
+    if(screen==="settings") renderSettings();
+    if(screen==="project") fillCustomers();
+  } else if((remote.updated||0) < (settings.updated||0)) await pushSettings();
+}
+async function pushSettings(){
+  await graph("PUT", "/me/drive/special/approot:/settings.json:/content",
+    new Blob([JSON.stringify(settings, null, 2)], {type:"application/json"}));
+}
+
+/* ---------- Microsoft sign-in and Graph ---------- */
+let msalApp = null, account = null;
+async function initMsal(){
+  if(!MS_READY) return;
+  try{
+    msalApp = new msal.PublicClientApplication({
+      auth:{clientId:CONFIG.clientId, authority:"https://login.microsoftonline.com/"+CONFIG.tenantId, redirectUri:BASE_URL, postLogoutRedirectUri:BASE_URL},
+      cache:{cacheLocation:"localStorage"}
+    });
+    await msalApp.initialize();
+    const res = await msalApp.handleRedirectPromise();
+    if(res && res.account) msalApp.setActiveAccount(res.account);
+    account = msalApp.getActiveAccount() || msalApp.getAllAccounts()[0] || null;
+    if(account){ msalApp.setActiveAccount(account); pullSettings().catch(e=>console.warn(e)); }
+  }catch(e){ toast("Microsoft sign-in didn't finish. Try again from Settings."); console.warn(e); }
+}
+function signIn(){ if(msalApp) msalApp.loginRedirect({scopes:SCOPES, prompt:"select_account"}); }
+function signOut(){ if(msalApp && account) msalApp.logoutRedirect({account, postLogoutRedirectUri:BASE_URL}); }
+async function getToken(){
+  if(!msalApp) throw new Error("Microsoft 365 isn't connected yet.");
+  if(!account) throw new Error("Sign in to Microsoft first (Settings).");
+  try{ return (await msalApp.acquireTokenSilent({scopes:SCOPES, account})).accessToken; }
+  catch(e){
+    if(e instanceof msal.InteractionRequiredAuthError){ msalApp.acquireTokenRedirect({scopes:SCOPES, account}); throw new Error("Signing you back in…"); }
+    throw e;
+  }
+}
+async function graph(method, path, body, opts={}){
+  const headers = {Authorization:"Bearer " + await getToken()};
+  if(body instanceof Blob) headers["Content-Type"] = body.type || "application/octet-stream";
+  else if(body){ headers["Content-Type"] = "application/json"; body = JSON.stringify(body); }
+  const r = await fetch("https://graph.microsoft.com/v1.0" + path, {method, headers, body});
+  if(opts.allow404 && r.status===404) return null;
+  if(!r.ok){ let msg = "Microsoft returned error " + r.status; try{ const j = await r.json(); if(j.error && j.error.message) msg = j.error.message; }catch(e){} throw new Error(msg); }
+  return r;
+}
+const odName = s => String(s||"").replace(/[\\/:*?"<>|#%]/g,"-").replace(/\s+/g," ").trim().replace(/[. ]+$/,"").slice(0,80) || "Untitled";
+const rootSegs = () => String(settings.root||"Bids").split("/").map(s=>s.trim()).filter(Boolean).map(odName);
+const drivePath = segs => "/me/drive/root:/" + segs.map(encodeURIComponent).join("/") + ":";
+
+/* ---------- Wizard ---------- */
+const yymm = () => { const d = new Date(); return String(d.getFullYear()).slice(2) + String(d.getMonth()+1).padStart(2,"0"); };
+function suggestQuoteNo(){
+  const m = yymm(), s = store.get("bb_qseq", {});
+  return `WB-${m}-${String((s.month===m ? s.n : 0) + 1).padStart(3,"0")}`;
+}
+
+function fillCustomers(){
+  const sel = $("#customer"), names = customerNames();
+  sel.innerHTML = `<option value="">${names.length ? "Choose a customer…" : "No customers yet. Add one below."}</option>` +
+    names.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("") +
+    `<option value="${NEWC}">＋ Add a new customer…</option>`;
+  sel.value = names.includes(bid.customer) ? bid.customer : "";
+}
+function fillDisciplines(){
+  $("#disc").innerHTML = `<option value="">Choose a discipline…</option>` +
+    DISCIPLINES.map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join("") +
+    `<option value="${OTHER}">Other (type it in)…</option>`;
+}
+function loadProjectForm(){ fillCustomers(); fields.forEach(f => $("#"+f).value = bid[f] || ""); }
+function showErr(id,msg){ const e=$("#err-"+id); e.textContent=msg||""; e.hidden=!msg; }
+
+function go(s){
+  screen = s; if(s!=="settings") returnTo = s; save();
+  document.querySelectorAll("section.screen").forEach(el => el.hidden = el.id !== "s-"+s);
+  const stepIdx = {project:0,rate:1,disc:2,more:2,summary:3,done:3}[s];
+  $("#steps").hidden = s==="settings";
+  document.querySelectorAll("#steps li").forEach((li,i)=>{ li.className = i<stepIdx ? "done" : i===stepIdx ? "on" : ""; });
+  $("#openSettings").hidden = s==="settings";
+  $("#tally").hidden = !(s==="disc"||s==="more");
+  if(s==="project") loadProjectForm();
+  if(s==="rate"){ $("#rate").value = bid.rate || ""; $("#rateNext").textContent = fromSummary ? "Back to summary" : "Next: hours"; }
+  if(s==="disc") prepDisc();
+  if(s==="more") renderMore();
+  if(s==="summary") renderSummary();
+  if(s==="done") renderDone();
+  if(s==="settings") renderSettings();
+  $("#projNext").textContent = fromSummary ? "Back to summary" : "Next: hourly rate";
+  updateTally();
+  window.scrollTo(0,0);
+}
+
+/* Project */
+$("#customer").addEventListener("change", e=>{
+  if(e.target.value===NEWC){ $("#newCustWrap").hidden=false; $("#newCust").focus(); }
+  else { $("#newCustWrap").hidden=true; bid.customer=e.target.value; save(); }
+});
+$("#saveCust").addEventListener("click", ()=>{
+  const name = $("#newCust").value.trim(); if(!name) return;
+  addCustomers([name]); settingsChanged();
+  bid.customer = customerNames().find(n=>n.toLowerCase()===name.toLowerCase());
+  $("#newCust").value=""; $("#newCustWrap").hidden=true; fillCustomers(); save();
+});
+fields.forEach(f => $("#"+f).addEventListener("input", e=>{ bid[f]=e.target.value; save(); }));
+$("#projNext").addEventListener("click", ()=>{
+  if(!bid.customer) return showErr("project","Choose who you're bidding to.");
+  if(!bid.desc.trim()) return showErr("project","Add a short project description.");
+  showErr("project");
+  if(fromSummary){ fromSummary=false; go("summary"); } else go("rate");
+});
+
+/* Rate */
+$("#rate").addEventListener("input", e=>{ bid.rate=e.target.value; save(); });
+$("#rateBack").addEventListener("click", ()=>{ if(fromSummary){ fromSummary=false; go("summary"); } else go("project"); });
+$("#rateNext").addEventListener("click", ()=>{
+  const r = num(bid.rate);
+  if(!(r>0)) return showErr("rate","Enter an hourly rate above $0.");
+  showErr("rate"); bid.rate = String(r); save();
+  if(fromSummary){ fromSummary=false; go("summary"); }
+  else go(bid.lines.length ? "more" : "disc");
+});
+
+/* Disciplines */
+function prepDisc(){
+  fillDisciplines(); showErr("disc");
+  const l = bid.lines.find(x=>x.id===editingId);
+  $("#discTitle").textContent = l ? "Edit discipline" : "Add a discipline";
+  $("#addLine").textContent = l ? "Save changes" : "Add to bid";
+  $("#cancelEdit").hidden = !l;
+  $("#discToMore").hidden = !!l || !bid.lines.length;
+  if(l){
+    if(DISCIPLINES.includes(l.disc)){ $("#disc").value=l.disc; $("#discOther").hidden=true; }
+    else { $("#disc").value=OTHER; $("#discOther").hidden=false; $("#discOther").value=l.disc; }
+    $("#notes").value=l.notes; $("#hours").value=l.hours; $("#isAlt").checked=!!l.alt;
+  } else {
+    $("#disc").value=""; $("#discOther").hidden=true; $("#discOther").value="";
+    $("#notes").value=""; $("#hours").value=""; $("#isAlt").checked=false;
+  }
+}
+$("#disc").addEventListener("change", e=>{ const o = e.target.value===OTHER; $("#discOther").hidden=!o; if(o) $("#discOther").focus(); });
+$("#addLine").addEventListener("click", ()=>{
+  const disc = $("#disc").value===OTHER ? $("#discOther").value.trim() : $("#disc").value;
+  const h = num($("#hours").value);
+  if(!disc) return showErr("disc","Choose a discipline, or pick Other and type one in.");
+  if(!(h>0)) return showErr("disc","Enter the hours for this discipline.");
+  const notes = $("#notes").value.trim(), alt = $("#isAlt").checked;
+  if(editingId){ Object.assign(bid.lines.find(x=>x.id===editingId), {disc,notes,hours:h,alt}); lastAdded = null; editingId = null; }
+  else { const id = Math.max(0,...bid.lines.map(x=>x.id))+1; bid.lines.push({id,disc,notes,hours:h,alt}); lastAdded = {disc,hours:h,alt}; }
+  save(); go("more");
+});
+$("#cancelEdit").addEventListener("click", ()=>{ editingId=null; go("more"); });
+$("#discToMore").addEventListener("click", ()=>{ lastAdded=null; go("more"); });
+
+function renderMore(){
+  const m = $("#addedMsg");
+  if(lastAdded){ m.hidden=false; m.innerHTML=`Added <strong>${esc(lastAdded.disc)}</strong>: ${hrs(lastAdded.hours)} hrs${lastAdded.alt?" as an add alternate":""}`; }
+  else m.hidden=true;
+  $("#moreLines").innerHTML = bid.lines.length ? bid.lines.map(l=>`
+    <div class="line">
+      <div class="name">${esc(l.disc)}${l.alt?'<span class="alt-tag">Alternate</span>':""}</div><div class="hrs">${hrs(l.hours)} hrs</div>
+      ${l.notes?`<div class="notes">${esc(l.notes)}</div>`:""}
+      <div class="tools"><button type="button" data-ed="${l.id}">Edit</button><button type="button" class="danger" data-rm="${l.id}">Remove</button></div>
+    </div>`).join("") : `<div class="empty">No disciplines yet.</div>`;
+  $("#moreNo").disabled = !bid.lines.length;
+}
+$("#moreLines").addEventListener("click", e=>{
+  const ed = e.target.dataset.ed, rm = e.target.dataset.rm;
+  if(ed){ editingId=+ed; go("disc"); }
+  if(rm){ bid.lines = bid.lines.filter(l=>l.id!==+rm); lastAdded=null; save(); renderMore(); updateTally(); }
+});
+$("#moreYes").addEventListener("click", ()=>{ editingId=null; lastAdded=null; go("disc"); });
+$("#moreNo").addEventListener("click", ()=>{ if(bid.lines.length){ lastAdded=null; go("summary"); } });
+
+function updateTally(){
+  const h = sumH(baseLines()), ah = sumH(altLines());
+  $("#tHours").textContent = hrs(h) + " hrs";
+  $("#tPrice").textContent = money(h*rate());
+  $("#tAlt").hidden = !ah; $("#tAlt").textContent = `+ alternates ${money(ah*rate())}`;
+}
+
+/* Summary */
+function renderSummary(){
+  $("#editChooser").hidden = true; $("#sumActions").hidden = false; showErr("summary");
+  $("#sumCustomer").textContent = bid.customer;
+  const rows = [["Description",bid.desc],["Owner",bid.owner],["State",bid.state],["Location",bid.location],
+    ["Structure no.",bid.ref1],["Other ref.",bid.ref2],["Bid due",fmtDate(bid.due)]].filter(r=>r[1]);
+  $("#sumProject").innerHTML = rows.map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join("");
+  $("#sumRate").textContent = money(rate()) + "/hr";
+  const r = rate(), b = baseLines(), a = altLines(), bh = sumH(b), ah = sumH(a);
+  const row = l => `<tr><td>${esc(l.disc)}${l.notes?`<span class="note">${esc(l.notes)}</span>`:""}</td><td class="n">${hrs(l.hours)}</td><td class="n">${money(l.hours*r)}</td></tr>`;
+  $("#sumTable").innerHTML = `<thead><tr><th>Discipline</th><th class="n">Hours</th><th class="n">Price</th></tr></thead><tbody>` +
+    b.map(row).join("") + `</tbody><tfoot><tr><td>Lump sum</td><td class="n">${hrs(bh)}</td><td class="n">${money(bh*r)}</td></tr></tfoot>` +
+    (a.length ? `<tbody><tr class="sect"><td colspan="3">Add alternates (not in lump sum)</td></tr>${a.map(row).join("")}</tbody>` : "");
+  $("#grand").innerHTML = `<div><div class="lbl">Total hours</div><div class="val">${hrs(bh)}</div></div>
+    <div class="price"><div class="lbl">Lump sum</div><div class="val">${money(bh*r)}</div></div>` +
+    (a.length ? `<div class="alt-note">Add alternates: <b>${hrs(ah)} hrs, ${money(ah*r)}</b>, priced separately</div>` : "");
+  if(!bid.acceptedOn && (!bid.quoteNo || !bid.quoteEdited)){ bid.quoteNo = suggestQuoteNo(); save(); }
+  $("#quoteNo").value = bid.quoteNo;
+}
+$("#quoteNo").addEventListener("input", e=>{ bid.quoteNo = e.target.value.trim(); bid.quoteEdited = true; save(); });
+$("#editBtn").addEventListener("click", ()=>{ $("#editChooser").hidden=false; $("#sumActions").hidden=true; });
+$("#editClose").addEventListener("click", ()=>{ $("#editChooser").hidden=true; $("#sumActions").hidden=false; });
+$("#editChooser").addEventListener("click", e=>{
+  const t = e.target.dataset.edit; if(!t) return;
+  if(t==="project"){ fromSummary=true; go("project"); }
+  if(t==="rate"){ fromSummary=true; go("rate"); }
+  if(t==="lines"){ lastAdded=null; go("more"); }
+});
+$("#acceptBtn").addEventListener("click", ()=>{
+  if(!bid.quoteNo) return showErr("summary","Enter a quotation number.");
+  const m = bid.quoteNo.match(/^WB-(\d{4})-(\d{3,})$/);
+  if(m && m[1]===yymm()){ const q = store.get("bb_qseq", {}); store.set("bb_qseq", {month:m[1], n:Math.max(q.month===m[1] ? q.n : 0, +m[2])}); }
+  // A changed quotation gets today's date and must be saved and sent again
+  if(bid.acceptedKey !== quoteKey()){ bid.acceptedOn = new Date().toISOString(); bid.acceptedKey = quoteKey(); bid.saved = null; bid.sent = null; bid.email = null; }
+  save(); go("done");
+});
+
+/* ---------- Accepted: quotation, save, email ---------- */
+const fileSafe = s => odName(s);
+function quoteData(){
+  const r = rate();
+  const refs = [bid.ref1 ? `Structure No. ${bid.ref1}` : "", bid.ref2].filter(Boolean).join(" · ");
+  return {
+    quoteNo: bid.quoteNo, customer: bid.customer,
+    date: longDate(bid.acceptedOn ? new Date(bid.acceptedOn) : new Date()),
+    refLines: [bid.owner, bid.location, bid.desc, refs].map(s=>(s||"").trim()).filter(Boolean),
+    items: quoteItems(baseLines(), r), lumpSum: sumH(baseLines())*r,
+    alternates: quoteItems(altLines(), r), revRate: r + 10
+  };
+}
+function quoteKey(){ const q = quoteData(); delete q.date; return JSON.stringify(q); }
+const pdfName = () => `${fileSafe(bid.quoteNo)}_quotation_${fileSafe(bid.customer).replace(/ /g,"-")}.pdf`;
+function pdfBlob(){ return buildQuotePdf(window.jspdf.jsPDF, quoteData()).output("blob"); }
+function blobToBase64(blob){ return new Promise((res,rej)=>{ const fr = new FileReader(); fr.onload = ()=>res(String(fr.result).split(",")[1]); fr.onerror = rej; fr.readAsDataURL(blob); }); }
+
+function defaultEmail(){
+  const q = quoteData();
+  const proj = bid.location || bid.desc;
+  let body = `Hello,\n\nAttached is our detailing quotation ${bid.quoteNo} for:\n${[bid.location, bid.desc].filter(Boolean).join("\n")}\n\n` +
+    `Lump sum: ${money(q.lumpSum)}\n`;
+  if(q.alternates.length) body += `Add alternates (priced separately): ${q.alternates.map(a=>`${a.name} ${money(a.price)}`).join("; ")}\n`;
+  body += `\nPlease let me know if you have any questions.\n\nDouglas J. Weaver\nWeaver Bridge Corporation\n740.258.7356`;
+  return { to: customerEmail(bid.customer), subject: `Detailing Quotation ${bid.quoteNo}${proj ? " - " + proj : ""}`, body };
+}
+
+function renderDone(){
+  $("#newConfirm").hidden = true;
+  const q = quoteData();
+  $("#doneLede").textContent = `${bid.quoteNo} for ${bid.customer}: ${money(q.lumpSum)} lump sum` + (q.alternates.length ? `, plus ${q.alternates.length} add alternate${q.alternates.length>1?"s":""}.` : ".");
+  $("#paper").innerHTML = `
+    <div class="lh"><h4>${esc(COMPANY.name)}</h4><div class="sub">${esc(COMPANY.subtitle)}</div><div class="addr">${esc(COMPANY.address)}</div></div>
+    <div class="rule"></div>
+    <div class="kv"><span class="k">TO:</span><span>${esc(q.customer)}</span><span class="date"><b>DATE:</b>${esc(q.date)}</span>
+      <span class="k">Attn:</span><span>${esc(COMPANY.attn)}</span><span></span></div>
+    <div class="kv"><span class="k">REF:</span><span>${q.refLines.map(esc).join("<br>")}</span><span></span></div>
+    <p>${esc(COMPANY.intro)}</p>
+    <div class="h">This quotation includes the following, as priced:</div>
+    <ul>${q.items.map(i=>`<li>${esc(i.name)}</li>`).join("")}</ul>
+    <div class="band"><span>LUMP SUM</span><span>${money(q.lumpSum)}</span></div>
+    ${q.alternates.length ? `<div class="h">Add Alternates (priced separately, not included in the base bid above):</div>
+      <div class="alts">${q.alternates.map(a=>`<span>• ${esc(a.name)}</span><b>${money(a.price)}</b>`).join("")}</div>` : ""}
+    <p><b>Delivery:</b> ${esc(COMPANY.delivery)}</p>
+    <p class="note">Note: Revisions to shop drawings due to design, approval, or fabricator changes will be billed at ${money(q.revRate)} per hour.</p>
+    <p>${esc(COMPANY.closing)}</p>
+    <div><div class="h">By:</div><div>${esc(COMPANY.signer)}</div><div style="color:var(--paper-slate);font-size:9.5px">${esc(COMPANY.short)}</div></div>
+    <div class="foot">${esc(COMPANY.short)}  |  Quotation  |  ${esc(q.quoteNo)}</div>`;
+  renderSaveCard(); renderMailCard();
+}
+
+function needSignIn(el, what){
+  if(!MS_READY){ el.innerHTML = `<p class="hint">Not connected to Microsoft 365 yet. Until it is, use "Share the PDF" below to ${what}.</p>`; return true; }
+  if(!account){ el.innerHTML = `<p class="hint">Sign in once to ${what} automatically.</p><button class="primary" type="button" data-signin>Sign in to Microsoft</button>`; return true; }
+  return false;
+}
+
+async function renderSaveCard(){
+  const el = $("#saveBody");
+  if(needSignIn(el, "save quotations to OneDrive")) return;
+  const custFolder = [...rootSegs(), odName(bid.customer)].join(" › ");
+  const savedNote = bid.saved ? `<p class="status ok">✓ Saved to ${esc(bid.saved.path)}${bid.saved.url ? ` · <a href="${esc(bid.saved.url)}" target="_blank" rel="noopener">Open</a>` : ""}</p>` : "";
+  el.innerHTML = `${savedNote}
+    <div class="field"><label for="projFolder">Project folder in ${esc(custFolder)}</label>
+      <select id="projFolder"><option value="">Loading folders…</option></select>
+      <input id="newFolder" autocomplete="off" hidden></div>
+    <p class="hint">File name: <span class="path">${esc(pdfName())}</span></p>
+    <button class="${bid.saved ? "secondary" : "primary"}" id="saveBtn" type="button">${bid.saved ? "Save again" : "Save to OneDrive"}</button>
+    <p class="status" id="saveStatus" hidden></p>`;
+  const sel = $("#projFolder"), nf = $("#newFolder");
+  const suggested = odName(bid.location || bid.desc).slice(0,60);
+  let folders = [];
+  try{
+    const r = await graph("GET", drivePath([...rootSegs(), odName(bid.customer)]) + "/children?$select=name,folder&$top=500", null, {allow404:true});
+    if(r) folders = (await r.json()).value.filter(i=>i.folder).map(i=>i.name).sort((a,b)=>a.localeCompare(b));
+  }catch(e){ toast("Couldn't list OneDrive folders: " + e.message); }
+  const pick = bid.folder && folders.includes(bid.folder) ? bid.folder : "";
+  sel.innerHTML = folders.map(f=>`<option value="${esc(f)}">${esc(f)}</option>`).join("") + `<option value="${NEWC}">＋ New project folder…</option>`;
+  sel.value = pick || NEWC;
+  nf.value = bid.folder && !folders.includes(bid.folder) ? bid.folder : suggested;
+  nf.hidden = sel.value !== NEWC;
+  sel.addEventListener("change", ()=>{ nf.hidden = sel.value !== NEWC; if(!nf.hidden) nf.focus(); });
+  $("#saveBtn").addEventListener("click", saveToOneDrive);
+}
+async function saveToOneDrive(){
+  const sel = $("#projFolder"), nf = $("#newFolder"), st = $("#saveStatus"), btn = $("#saveBtn");
+  const folder = odName(sel.value === NEWC ? nf.value : sel.value);
+  if(!folder || folder==="Untitled"){ st.hidden=false; st.className="status bad"; st.textContent="Name the project folder first."; return; }
+  btn.disabled = true; st.hidden=false; st.className="status busy"; st.textContent = "Saving…";
+  try{
+    const segs = [...rootSegs(), odName(bid.customer), folder, pdfName()];
+    const r = await graph("PUT", drivePath(segs) + "/content", new Blob([pdfBlob()], {type:"application/pdf"}));
+    const item = await r.json();
+    bid.folder = folder; bid.saved = {path: segs.join(" › "), url: item.webUrl || "", at: new Date().toISOString()}; save();
+    toast("Saved to OneDrive"); renderSaveCard();
+  }catch(e){ st.className="status bad"; st.textContent = "Not saved: " + e.message; btn.disabled = false; }
+}
+
+function renderMailCard(){
+  const el = $("#mailBody");
+  if(needSignIn(el, "email quotations from douglas@weaverbridge.net")) return;
+  if(!bid.email) { bid.email = defaultEmail(); save(); }
+  const e = bid.email;
+  const sentNote = bid.sent ? `<p class="status ok">✓ Sent to ${esc(bid.sent.to)} on ${esc(new Date(bid.sent.at).toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}))}</p>` : "";
+  el.innerHTML = `${sentNote}
+    <div class="field"><label for="mTo">To</label><input id="mTo" type="email" inputmode="email" autocomplete="off" value="${esc(e.to)}" placeholder="estimating@company.com">
+      ${customerEmail(bid.customer) ? "" : `<p class="hint">No email saved for ${esc(bid.customer)} yet. The address you send to will be remembered.</p>`}</div>
+    <div class="field"><label for="mSubject">Subject</label><input id="mSubject" autocomplete="off" value="${esc(e.subject)}"></div>
+    <div class="field"><label for="mBody">Message</label><textarea id="mBody" style="min-height:220px">${esc(e.body)}</textarea></div>
+    <p class="hint">The quotation PDF is attached.${settings.bcc ? ` A blind copy goes to ${esc(settings.bcc)}.` : ""}</p>
+    <button class="${bid.sent ? "secondary" : "primary"}" id="sendBtn" type="button">${bid.sent ? "Send again" : "Send to " + esc(bid.customer)}</button>
+    <div class="confirm" id="sendConfirm" hidden style="border-color:var(--accent)">
+      <div id="sendConfirmText"></div>
+      <div class="actions two"><button class="secondary" id="sendNo" type="button">Cancel</button><button class="primary" id="sendYes" type="button">Send now</button></div>
+    </div>
+    <p class="status" id="sendStatus" hidden></p>`;
+  ["mTo","mSubject","mBody"].forEach(id => $("#"+id).addEventListener("input", ()=>{
+    bid.email = {to:$("#mTo").value.trim(), subject:$("#mSubject").value, body:$("#mBody").value}; save(); }));
+  $("#sendBtn").addEventListener("click", ()=>{
+    const to = splitAddrs($("#mTo").value), st = $("#sendStatus");
+    if(!to.length || !to.every(a=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(a))){ st.hidden=false; st.className="status bad"; st.textContent="Enter a valid email address."; return; }
+    $("#sendConfirmText").textContent = `Send ${bid.quoteNo} to ${to.join(", ")} from your weaverbridge.net email?`;
+    $("#sendConfirm").hidden = false; $("#sendBtn").hidden = true;
+  });
+  $("#sendNo").addEventListener("click", ()=>{ $("#sendConfirm").hidden = true; $("#sendBtn").hidden = false; });
+  $("#sendYes").addEventListener("click", sendEmail);
+}
+const splitAddrs = s => String(s||"").split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);
+async function sendEmail(){
+  const st = $("#sendStatus"), yes = $("#sendYes"); const e = bid.email; const to = splitAddrs(e.to);
+  yes.disabled = true; st.hidden=false; st.className="status busy"; st.textContent="Sending…";
+  try{
+    const message = {
+      subject: e.subject, body: {contentType:"Text", content: e.body},
+      toRecipients: to.map(address=>({emailAddress:{address}})),
+      bccRecipients: splitAddrs(settings.bcc).map(address=>({emailAddress:{address}})),
+      attachments: [{"@odata.type":"#microsoft.graph.fileAttachment", name: pdfName(), contentType:"application/pdf", contentBytes: await blobToBase64(pdfBlob())}]
+    };
+    await graph("POST", "/me/sendMail", {message, saveToSentItems:true});
+    bid.sent = {to: to.join(", "), at: new Date().toISOString()}; save();
+    if(!customerEmail(bid.customer)){ addCustomers([{name:bid.customer, email:to[0]}]); settingsChanged(); }
+    toast("Quotation sent"); renderMailCard();
+  }catch(err){ st.className="status bad"; st.textContent = "Not sent: " + err.message; yes.disabled = false; }
+}
+
+$("#sharePdf").addEventListener("click", async ()=>{
+  const file = new File([pdfBlob()], pdfName(), {type:"application/pdf"});
+  try{
+    if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title: pdfName()}); return; }
+  }catch(e){ if(e.name==="AbortError") return; }
+  const url = URL.createObjectURL(file), a = document.createElement("a");
+  a.href = url; a.download = pdfName(); document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 60000);
+});
+document.addEventListener("click", e=>{ if(e.target.matches("[data-signin]")) signIn(); });
+
+$("#backToSummary").addEventListener("click", ()=>go("summary"));
+$("#newBid").addEventListener("click", ()=>{ $("#newConfirm").hidden=false; });
+$("#newNo").addEventListener("click", ()=>{ $("#newConfirm").hidden=true; });
+$("#newYes").addEventListener("click", ()=>{ bid = blank(); editingId=null; lastAdded=null; fromSummary=false; go("project"); });
+
+/* ---------- Settings screen ---------- */
+function renderSettings(){
+  const st = $("#msStatus"), b = $("#msButton");
+  if(!MS_READY){ st.className="status"; st.textContent="Not connected yet. This is turned on once the app is registered in Microsoft 365."; b.hidden=true; }
+  else if(account){ st.className="status ok"; st.textContent=`Signed in as ${account.username}`; b.hidden=false; b.textContent="Sign out"; }
+  else { st.className="status"; st.textContent="Not signed in."; b.hidden=false; b.textContent="Sign in to Microsoft"; }
+  $("#custList").innerHTML = settings.customers.length ? settings.customers.map((c,i)=>`
+    <div class="cust-row"><div class="nm">${esc(c.name)}</div><button type="button" data-rmc="${i}">Remove</button>
+      <input type="email" inputmode="email" data-em="${i}" value="${esc(c.email)}" placeholder="Estimating email" autocomplete="off"></div>`).join("")
+    : `<p class="hint">No customers yet.</p>`;
+  $("#bcc").value = settings.bcc || "";
+  $("#root").value = settings.root || "Bids";
+  $("#rootHint").textContent = `Quotations save to ${rootSegs().join(" › ")} › Customer › Project folder.`;
+}
+$("#msButton").addEventListener("click", ()=> account ? signOut() : signIn());
+$("#custList").addEventListener("input", e=>{ const i = e.target.dataset.em; if(i!==undefined){ settings.customers[+i].email = e.target.value.trim(); settingsChanged(); } });
+$("#custList").addEventListener("click", e=>{
+  const i = e.target.dataset.rmc; if(i===undefined) return;
+  if(e.target.dataset.armed){ settings.customers.splice(+i,1); settingsChanged(); renderSettings(); }
+  else { e.target.dataset.armed = "1"; e.target.textContent = "Tap again to remove"; }
+});
+$("#addCustBtn").addEventListener("click", ()=>{
+  const name = $("#addCustName").value.trim(); if(!name) return;
+  addCustomers([{name, email:$("#addCustEmail").value.trim()}]); settingsChanged();
+  $("#addCustName").value = ""; $("#addCustEmail").value = ""; renderSettings();
+});
+$("#bcc").addEventListener("input", e=>{ settings.bcc = e.target.value.trim(); settingsChanged(); });
+$("#root").addEventListener("input", e=>{ settings.root = e.target.value.trim() || "Bids"; settingsChanged(); $("#rootHint").textContent = `Quotations save to ${rootSegs().join(" › ")} › Customer › Project folder.`; });
+$("#openSettings").addEventListener("click", ()=>go("settings"));
+$("#closeSettings").addEventListener("click", ()=>go(returnTo || "project"));
+
+/* ---------- Start ---------- */
+(async function start(){
+  importFromHash();
+  await initMsal();
+  const ok = ["project","rate","disc","more","summary","done","settings"];
+  if(!ok.includes(screen)) screen = "project";
+  if(["summary","done","more"].includes(screen) && !bid.lines.length) screen = bid.rate ? "disc" : "project";
+  if(screen==="done" && !bid.quoteNo) screen = "summary";
+  go(screen);
+})();
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
