@@ -1,5 +1,5 @@
 // Keeps Bridge Bid working with no signal. App files load fresh when online, from the phone when offline.
-const CACHE = "bridge-bid-v1";
+const CACHE = "bridge-bid-v2";
 const SHELL = ["./", "./index.html", "./config.js", "./manifest.webmanifest",
   "./vendor/jspdf.umd.min.js", "./vendor/msal-browser.min.js", "./icons/apple-touch-icon.png", "./icons/icon-192.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
