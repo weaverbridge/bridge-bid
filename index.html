@@ -352,7 +352,10 @@ a{color:var(--accent)}
       </div>
     </div>
     <div class="card">
-      <div class="card-h"><h3>Email copies</h3></div>
+      <div class="card-h"><h3>Email</h3></div>
+      <div class="field"><label for="sendFrom">Send quotations from</label>
+        <input id="sendFrom" type="email" inputmode="email" placeholder="Leave blank to send from your own address" autocomplete="off">
+        <p class="hint">Customers see the name on this mailbox as the sender.</p></div>
       <div class="field"><label for="bcc">Send a blind copy of each quotation to</label>
         <input id="bcc" type="email" inputmode="email" placeholder="your@email.com" autocomplete="off"></div>
     </div>
@@ -384,7 +387,8 @@ const COMPANY = {
   name:"WEAVER BRIDGE CORPORATION", short:"Weaver Bridge Corporation",
   subtitle:"Structural Detailing Quotation",
   address:"974 James Road · Granville, OH 43023 · 740.258.7356",
-  signer:"Douglas J. Weaver", attn:"Estimating",
+  signer:"Weaver Bridge Corporation", attn:"Estimating",
+  sendFrom:"estimating@weaverbridge.net", phone:"740.258.7356",
   delivery:"As required - call WBC to discuss.",
   intro:"We are pleased to offer the following quotation for detailed and checked shop drawings for the above-mentioned project.",
   closing:"If you have any questions regarding this quotation, please do not hesitate to contact us at your earliest convenience."
@@ -497,8 +501,7 @@ function buildQuotePdf(JsPDF, q){
   doc.splitTextToSize(COMPANY.closing, W).forEach(s => { T(s, L, y); y += 13; });
   y += 22;
   T("By:", L, y, {font:"bold", size:9, color:SLATE}); y += 15;
-  T(COMPANY.signer, L, y); y += 12;
-  T(COMPANY.short, L, y, {size:8.2, color:SLATE});
+  T(COMPANY.signer, L, y);
 
   // Footer on every page
   const n = doc.getNumberOfPages();
@@ -522,7 +525,7 @@ const MS_READY = !!(CONFIG.clientId && CONFIG.tenantId && window.msal);
 const SCOPES = ["User.Read", "Files.ReadWrite", "Mail.Send"];
 const blank = () => ({customer:"",owner:"",state:"",desc:"",ref1:"",ref2:"",location:"",due:"",rate:"",lines:[],quoteNo:""});
 
-let settings = Object.assign({customers:[], bcc:"", root:"Bids", updated:0}, store.get("bb_settings", {}));
+let settings = Object.assign({customers:[], bcc:"", root:"Bids", sendFrom:COMPANY.sendFrom, updated:0}, store.get("bb_settings", {}));
 let bid = Object.assign(blank(), store.get("bb_draft", {}));
 let screen = store.get("bb_screen", "project");
 let returnTo = store.get("bb_return", "project");
@@ -585,7 +588,7 @@ async function pullSettings(){
   }
   const remote = await r.json();
   if((remote.updated||0) > (settings.updated||0)){
-    settings = Object.assign({customers:[], bcc:"", root:"Bids", updated:0}, remote);
+    settings = Object.assign({customers:[], bcc:"", root:"Bids", sendFrom:COMPANY.sendFrom, updated:0}, remote);
     store.set("bb_settings", settings);
     if(screen==="project") fillCustomers();
   } else if((remote.updated||0) < (settings.updated||0)) await pushSettings();
@@ -826,13 +829,13 @@ function pdfBlob(){ return buildQuotePdf(window.jspdf.jsPDF, quoteData()).output
 function blobToBase64(blob){ return new Promise((res,rej)=>{ const fr = new FileReader(); fr.onload = ()=>res(String(fr.result).split(",")[1]); fr.onerror = rej; fr.readAsDataURL(blob); }); }
 
 // The email names the project only. Prices appear on the attached PDF and nowhere else.
-const EMAIL_VERSION = 2;
+const EMAIL_VERSION = 3;
 function defaultEmail(){
   const proj = bid.location || bid.desc;
   const refs = [bid.ref1 ? `Structure No. ${bid.ref1}` : "", bid.ref2].filter(Boolean).join(" \u00b7 ");
   const projLines = [bid.owner, bid.location, bid.desc, refs].map(x=>(x||"").trim()).filter(Boolean).join("\n");
   const body = `Hello,\n\nAttached is our detailing quotation ${bid.quoteNo} for the following project:\n\n${projLines}\n\n` +
-    `Please let me know if you have any questions.\n\nDouglas J. Weaver\nWeaver Bridge Corporation\n740.258.7356`;
+    `Please let me know if you have any questions.\n\nWeaver Bridge Corporation\n${COMPANY.phone}${settings.sendFrom ? "\n" + settings.sendFrom : ""}`;
   return { v: EMAIL_VERSION, to: customerEmail(bid.customer), subject: `Detailing Quotation ${bid.quoteNo}${proj ? " - " + proj : ""}`, body };
 }
 
@@ -855,7 +858,7 @@ function renderDone(){
     <p><b>Delivery:</b> ${esc(COMPANY.delivery)}</p>
     <p class="note">Note: Revisions to shop drawings due to design, approval, or fabricator changes will be billed at ${money(q.revRate)} per hour.</p>
     <p>${esc(COMPANY.closing)}</p>
-    <div><div class="h">By:</div><div>${esc(COMPANY.signer)}</div><div style="color:var(--paper-slate);font-size:9.5px">${esc(COMPANY.short)}</div></div>
+    <div><div class="h">By:</div><div>${esc(COMPANY.signer)}</div></div>
     <div class="foot">${esc(COMPANY.short)}  |  Quotation  |  ${esc(q.quoteNo)}</div>`;
   renderSaveCard(); renderMailCard();
 }
@@ -909,7 +912,7 @@ async function saveToOneDrive(){
 
 function renderMailCard(){
   const el = $("#mailBody");
-  if(needSignIn(el, "email quotations from douglas@weaverbridge.net")) return;
+  if(needSignIn(el, "email quotations to your customers")) return;
   if(!bid.email || bid.email.v !== EMAIL_VERSION){ const to = bid.email && bid.email.to; bid.email = defaultEmail(); if(to) bid.email.to = to; save(); }
   const e = bid.email;
   const sentNote = bid.sent ? `<p class="status ok">✓ Sent to ${esc(bid.sent.to)} on ${esc(new Date(bid.sent.at).toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}))}</p>` : "";
@@ -918,7 +921,7 @@ function renderMailCard(){
       ${customerEmail(bid.customer) ? "" : `<p class="hint">No email saved for ${esc(bid.customer)} yet. The address you send to will be remembered.</p>`}</div>
     <div class="field"><label for="mSubject">Subject</label><input id="mSubject" autocomplete="off" value="${esc(e.subject)}"></div>
     <div class="field"><label for="mBody">Message</label><textarea id="mBody" style="min-height:220px">${esc(e.body)}</textarea></div>
-    <p class="hint">The quotation PDF is attached.${settings.bcc ? ` A blind copy goes to ${esc(settings.bcc)}.` : ""}</p>
+    <p class="hint">Sent from ${esc(settings.sendFrom || account.username)}. The quotation PDF is attached.${settings.bcc ? ` A blind copy goes to ${esc(settings.bcc)}.` : ""}</p>
     <button class="${bid.sent ? "secondary" : "primary"}" id="sendBtn" type="button">${bid.sent ? "Send again" : "Send to " + esc(bid.customer)}</button>
     <div class="confirm" id="sendConfirm" hidden style="border-color:var(--accent)">
       <div id="sendConfirmText"></div>
@@ -930,7 +933,7 @@ function renderMailCard(){
   $("#sendBtn").addEventListener("click", ()=>{
     const to = splitAddrs($("#mTo").value), st = $("#sendStatus");
     if(!to.length || !to.every(a=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(a))){ st.hidden=false; st.className="status bad"; st.textContent="Enter a valid email address."; return; }
-    $("#sendConfirmText").textContent = `Send ${bid.quoteNo} to ${to.join(", ")} from your weaverbridge.net email?`;
+    $("#sendConfirmText").textContent = `Send ${bid.quoteNo} to ${to.join(", ")} from ${settings.sendFrom || (account && account.username) || "your email"}?`;
     $("#sendConfirm").hidden = false; $("#sendBtn").hidden = true;
   });
   $("#sendNo").addEventListener("click", ()=>{ $("#sendConfirm").hidden = true; $("#sendBtn").hidden = false; });
@@ -947,11 +950,17 @@ async function sendEmail(){
       bccRecipients: splitAddrs(settings.bcc).map(address=>({emailAddress:{address}})),
       attachments: [{"@odata.type":"#microsoft.graph.fileAttachment", name: pdfName(), contentType:"application/pdf", contentBytes: await blobToBase64(pdfBlob())}]
     };
+    if(settings.sendFrom) message.from = {emailAddress:{address: settings.sendFrom}};
     await graph("POST", "/me/sendMail", {message, saveToSentItems:true});
     bid.sent = {to: to.join(", "), at: new Date().toISOString()}; save();
     if(!customerEmail(bid.customer)){ addCustomers([{name:bid.customer, email:to[0]}]); settingsChanged(); }
     toast("Quotation sent"); renderMailCard();
-  }catch(err){ st.className="status bad"; st.textContent = "Not sent: " + err.message; yes.disabled = false; }
+  }catch(err){
+    let msg = err.message;
+    if(settings.sendFrom && /send ?as|permission|on behalf|not authorized|access ?denied/i.test(msg))
+      msg = `You don't have permission to send as ${settings.sendFrom} yet. In the Microsoft 365 admin center, add yourself as a member of that shared mailbox, wait about 30 minutes, and try again. (Microsoft said: ${err.message})`;
+    st.className="status bad"; st.textContent = "Not sent: " + msg; yes.disabled = false;
+  }
 }
 
 $("#sharePdf").addEventListener("click", async ()=>{
@@ -988,6 +997,7 @@ function renderSettings(){
       <input type="email" inputmode="email" data-em="${i}" value="${esc(c.email)}" placeholder="Estimating email" autocomplete="off"></div>`).join("")
     : `<p class="hint">No customers yet.</p>`;
   $("#bcc").value = settings.bcc || "";
+  $("#sendFrom").value = settings.sendFrom || "";
   $("#root").value = settings.root || "Bids";
   $("#rootHint").textContent = `Quotations save to ${rootSegs().join(" › ")} › Customer › Project folder.`;
 }
@@ -1005,6 +1015,7 @@ $("#addCustBtn").addEventListener("click", ()=>{
   $("#addCustName").value = ""; $("#addCustEmail").value = ""; renderSettings();
 });
 $("#bcc").addEventListener("input", e=>{ settings.bcc = e.target.value.trim(); settingsChanged(); });
+$("#sendFrom").addEventListener("input", e=>{ settings.sendFrom = e.target.value.trim(); settingsChanged(); });
 $("#root").addEventListener("input", e=>{ settings.root = e.target.value.trim() || "Bids"; settingsChanged(); $("#rootHint").textContent = `Quotations save to ${rootSegs().join(" › ")} › Customer › Project folder.`; });
 $("#openSettings").addEventListener("click", ()=>{ go("settings"); syncSettings(); });
 $("#closeSettings").addEventListener("click", ()=>go(returnTo || "project"));
