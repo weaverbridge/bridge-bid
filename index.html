@@ -825,14 +825,15 @@ const pdfName = () => `${fileSafe(bid.quoteNo)}_quotation_${fileSafe(bid.custome
 function pdfBlob(){ return buildQuotePdf(window.jspdf.jsPDF, quoteData()).output("blob"); }
 function blobToBase64(blob){ return new Promise((res,rej)=>{ const fr = new FileReader(); fr.onload = ()=>res(String(fr.result).split(",")[1]); fr.onerror = rej; fr.readAsDataURL(blob); }); }
 
+// The email names the project only. Prices appear on the attached PDF and nowhere else.
+const EMAIL_VERSION = 2;
 function defaultEmail(){
-  const q = quoteData();
   const proj = bid.location || bid.desc;
-  let body = `Hello,\n\nAttached is our detailing quotation ${bid.quoteNo} for:\n${[bid.location, bid.desc].filter(Boolean).join("\n")}\n\n` +
-    `Lump sum: ${money(q.lumpSum)}\n`;
-  if(q.alternates.length) body += `Add alternates (priced separately): ${q.alternates.map(a=>`${a.name} ${money(a.price)}`).join("; ")}\n`;
-  body += `\nPlease let me know if you have any questions.\n\nDouglas J. Weaver\nWeaver Bridge Corporation\n740.258.7356`;
-  return { to: customerEmail(bid.customer), subject: `Detailing Quotation ${bid.quoteNo}${proj ? " - " + proj : ""}`, body };
+  const refs = [bid.ref1 ? `Structure No. ${bid.ref1}` : "", bid.ref2].filter(Boolean).join(" \u00b7 ");
+  const projLines = [bid.owner, bid.location, bid.desc, refs].map(x=>(x||"").trim()).filter(Boolean).join("\n");
+  const body = `Hello,\n\nAttached is our detailing quotation ${bid.quoteNo} for the following project:\n\n${projLines}\n\n` +
+    `Please let me know if you have any questions.\n\nDouglas J. Weaver\nWeaver Bridge Corporation\n740.258.7356`;
+  return { v: EMAIL_VERSION, to: customerEmail(bid.customer), subject: `Detailing Quotation ${bid.quoteNo}${proj ? " - " + proj : ""}`, body };
 }
 
 function renderDone(){
@@ -909,7 +910,7 @@ async function saveToOneDrive(){
 function renderMailCard(){
   const el = $("#mailBody");
   if(needSignIn(el, "email quotations from douglas@weaverbridge.net")) return;
-  if(!bid.email) { bid.email = defaultEmail(); save(); }
+  if(!bid.email || bid.email.v !== EMAIL_VERSION){ const to = bid.email && bid.email.to; bid.email = defaultEmail(); if(to) bid.email.to = to; save(); }
   const e = bid.email;
   const sentNote = bid.sent ? `<p class="status ok">✓ Sent to ${esc(bid.sent.to)} on ${esc(new Date(bid.sent.at).toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}))}</p>` : "";
   el.innerHTML = `${sentNote}
@@ -925,7 +926,7 @@ function renderMailCard(){
     </div>
     <p class="status" id="sendStatus" hidden></p>`;
   ["mTo","mSubject","mBody"].forEach(id => $("#"+id).addEventListener("input", ()=>{
-    bid.email = {to:$("#mTo").value.trim(), subject:$("#mSubject").value, body:$("#mBody").value}; save(); }));
+    bid.email = {v:EMAIL_VERSION, to:$("#mTo").value.trim(), subject:$("#mSubject").value, body:$("#mBody").value}; save(); }));
   $("#sendBtn").addEventListener("click", ()=>{
     const to = splitAddrs($("#mTo").value), st = $("#sendStatus");
     if(!to.length || !to.every(a=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(a))){ st.hidden=false; st.className="status bad"; st.textContent="Enter a valid email address."; return; }
